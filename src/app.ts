@@ -4,11 +4,13 @@ import cors from "cors";
 const app = express();
 
 app.use(cors());
-
 app.use(express.json());
 
-app.get("/", (req, res) => {
-    res.send("GearUp Backend Running...");
+app.get("/", (_req, res) => {
+  res.json({
+    success: true,
+    message: "GearUp Backend API Running",
+  });
 });
 
 export default app;
