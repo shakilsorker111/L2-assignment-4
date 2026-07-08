@@ -7,7 +7,11 @@ import sendResponse from "../../utils/sendResponse";
 
 
 const createGear = catchAsync(async (req: Request, res: Response) => {
-  const providerId = req.user!.id;
+    // console.log("request user", req.user)
+
+
+  const providerId = req.user!.userId;
+//   console.log("provider id:", providerId)
 
   const result = await GearService.createGear(req.body, providerId);
 
@@ -19,7 +23,7 @@ const createGear = catchAsync(async (req: Request, res: Response) => {
 });
 
 const updateGear = catchAsync(async (req: Request, res: Response) => {
-  const providerId = req.user!.id;
+  const providerId = req.user!.userId;
 
   const result = await GearService.updateGear(
     req.params.id as string,
@@ -35,7 +39,7 @@ const updateGear = catchAsync(async (req: Request, res: Response) => {
 });
 
 const deleteGear = catchAsync(async (req: Request, res: Response) => {
-  const providerId = req.user!.id;
+  const providerId = req.user!.userId;
 
   await GearService.deleteGear(req.params.id as string, providerId);
 
