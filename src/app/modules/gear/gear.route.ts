@@ -9,6 +9,11 @@ import verifyToken from "../../middlewares/verifyToken";
 
 const router = Router();
 
+
+router.get("/", GearController.getAllGear);
+
+router.get("/:id", GearController.getSingleGear);
+
 router.post(
   "/",
   verifyToken,

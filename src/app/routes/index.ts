@@ -8,6 +8,7 @@ const router = Router();
 router.use("/auth", authRoutes);
 router.use("/categories", categoryRoutes);
 router.use("/provider/gear", gearRoutes);
+router.use("/gear", gearRoutes);
 
 router.get("/", (_req, res) => {
   res.json({
