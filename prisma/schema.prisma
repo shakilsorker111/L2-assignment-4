@@ -1,8 +1,187 @@
 generator client {
-  provider = "prisma-client"
-  output   = "../src/generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  CUSTOMER
+  PROVIDER
+  ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+enum RentalStatus {
+  PLACED
+  CONFIRMED
+  PAID
+  PICKED_UP
+  RETURNED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+enum PaymentProvider {
+  STRIPE
+  SSLCOMMERZ
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  phone     String?
+  avatar    String?
+
+  role      UserRole   @default(CUSTOMER)
+  status    UserStatus @default(ACTIVE)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  gearItems     GearItem[]
+  rentals       RentalOrder[] @relation("CustomerRentals")
+  providerOrders RentalOrder[] @relation("ProviderOrders")
+  reviews       Review[]
+}
+
+model Category {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  slug      String   @unique
+  image      String?
+
+  createdAt DateTime @default(now())
+
+  gearItems GearItem[]
+}
+
+model GearItem {
+  id              String   @id @default(cuid())
+
+  title           String
+  brand           String
+  description     String
+
+  condition       String
+
+  pricePerDay     Float
+
+  stock           Int
+
+  availableStock  Int
+
+  image           String
+
+  isAvailable     Boolean @default(true)
+
+  providerId      String
+
+  categoryId      String
+
+  createdAt       DateTime @default(now())
+
+  updatedAt       DateTime @updatedAt
+
+  provider User @relation(fields: [providerId], references: [id])
+
+  category Category @relation(fields: [categoryId], references: [id])
+
+  rentals RentalOrder[]
+
+  reviews Review[]
+}
+
+model RentalOrder {
+  id String @id @default(cuid())
+
+  customerId String
+
+  providerId String
+
+  gearItemId String
+
+  quantity Int
+
+  startDate DateTime
+
+  endDate DateTime
+
+  days Int
+
+  pricePerDay Float
+
+  subtotal Float
+
+  serviceFee Float
+
+  totalPrice Float
+
+  status RentalStatus @default(PLACED)
+
+  paymentStatus PaymentStatus @default(PENDING)
+
+  createdAt DateTime @default(now())
+
+  updatedAt DateTime @updatedAt
+
+  customer User @relation("CustomerRentals", fields: [customerId], references: [id])
+
+  provider User @relation("ProviderOrders", fields: [providerId], references: [id])
+
+  gearItem GearItem @relation(fields: [gearItemId], references: [id])
+
+  payment Payment?
+}
+
+model Payment {
+  id String @id @default(cuid())
+
+  rentalOrderId String @unique
+
+  transactionId String @unique
+
+  amount Float
+
+  provider PaymentProvider
+
+  status PaymentStatus @default(PENDING)
+
+  paidAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  rentalOrder RentalOrder @relation(fields: [rentalOrderId], references: [id])
+}
+
+model Review {
+  id String @id @default(cuid())
+
+  customerId String
+
+  gearItemId String
+
+  rating Int
+
+  comment String
+
+  createdAt DateTime @default(now())
+
+  customer User @relation(fields: [customerId], references: [id])
+
+  gearItem GearItem @relation(fields: [gearItemId], references: [id])
 }
