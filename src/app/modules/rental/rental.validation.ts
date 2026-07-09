@@ -1,3 +1,4 @@
+import { RentalStatus } from "@prisma/client";
 import { z } from "zod";
 
 export const createRentalSchema = z.object({
@@ -9,5 +10,11 @@ export const createRentalSchema = z.object({
     startDate: z.coerce.date(),
 
     endDate: z.coerce.date(),
+  }),
+});
+
+export const updateRentalStatusSchema = z.object({
+  body: z.object({
+    status: z.nativeEnum(RentalStatus),
   }),
 });

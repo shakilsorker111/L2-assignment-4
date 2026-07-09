@@ -1,9 +1,24 @@
-
-
 import { StatusCodes } from "http-status-codes";
 import prisma from "../../config/prisma";
 import { CreateRentalPayload } from "./rental.interface";
 import AppError from "../../errors/AppError";
+import { RentalStatus } from "@prisma/client";
+
+
+
+const allowedTransitions: Record<RentalStatus, RentalStatus[]> = {
+  PLACED: ["CONFIRMED", "CANCELLED"],
+
+  CONFIRMED: ["PAID", "CANCELLED"],
+
+  PAID: ["PICKED_UP"],
+
+  PICKED_UP: ["RETURNED"],
+
+  RETURNED: [],
+
+  CANCELLED: [],
+};
 
 const createRental = async (
   payload: CreateRentalPayload,
@@ -85,17 +100,28 @@ const createRental = async (
       },
     });
 
-    // Update stock
-    await tx.gearItem.update({
-      where: {
-        id: gear.id,
-      },
-      data: {
-        availableStock: {
-          decrement: payload.quantity,
-        },
-      },
-    });
+    // Update available stock
+    const updatedGear = await tx.gearItem.update({
+  where: {
+    id: gear.id,
+  },
+  data: {
+    availableStock: {
+      decrement: payload.quantity,
+    },
+  },
+});
+
+if (updatedGear.availableStock === 0) {
+  await tx.gearItem.update({
+    where: {
+      id: gear.id,
+    },
+    data: {
+      isAvailable: false,
+    },
+  });
+}
 
     return newRental;
   });
@@ -103,6 +129,198 @@ const createRental = async (
   return rental;
 };
 
+const getMyRentals = async (
+  customerId: string,
+  query: Record<string, unknown>
+) => {
+  const page = Math.max(Number(query.page) || 1, 1);
+  const limit = Math.min(Math.max(Number(query.limit) || 10, 1), 10);
+  const skip = (page - 1) * limit;
+
+  const status = query.status as string | undefined;
+
+  const where: any = {
+    customerId,
+  };
+
+  if (status) {
+    where.status = status;
+  }
+
+  const [data, total] = await Promise.all([
+    prisma.rentalOrder.findMany({
+      where,
+      skip,
+      take: limit,
+      orderBy: {
+        createdAt: "desc",
+      },
+      include: {
+        gearItem: true,
+        provider: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
+    }),
+
+    prisma.rentalOrder.count({
+      where,
+    }),
+  ]);
+
+  return {
+    meta: {
+      page,
+      limit,
+      total,
+      totalPage: Math.ceil(total / limit),
+    },
+    data,
+  };
+};
+
+const getProviderOrders = async (
+  providerId: string,
+  query: Record<string, unknown>
+) => {
+  const page = Math.max(Number(query.page) || 1, 1);
+  const limit = Math.min(Math.max(Number(query.limit) || 10, 1), 10);
+  const skip = (page - 1) * limit;
+
+  const status = query.status as string | undefined;
+
+  const where: any = {
+    providerId,
+  };
+
+  if (status) {
+    where.status = status;
+  }
+
+  const [data, total] = await Promise.all([
+    prisma.rentalOrder.findMany({
+      where,
+      skip,
+      take: limit,
+      orderBy: {
+        createdAt: "desc",
+      },
+      include: {
+        customer: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+        gearItem: true,
+      },
+    }),
+
+    prisma.rentalOrder.count({
+      where,
+    }),
+  ]);
+
+  return {
+    meta: {
+      page,
+      limit,
+      total,
+      totalPage: Math.ceil(total / limit),
+    },
+    data,
+  };
+};
+
+const updateRentalStatus = async (
+  rentalId: string,
+  providerId: string,
+  status: RentalStatus
+) => {
+  const rental = await prisma.rentalOrder.findUnique({
+    where: {
+      id: rentalId,
+    },
+    include: {
+      gearItem: true,
+    },
+  });
+
+  if (!rental) {
+    throw new AppError(
+      StatusCodes.NOT_FOUND,
+      "Rental not found"
+    );
+  }
+
+  if (rental.providerId !== providerId) {
+    throw new AppError(
+      StatusCodes.FORBIDDEN,
+      "You can only manage your own rentals"
+    );
+  }
+
+  const allowed = allowedTransitions[rental.status];
+
+  if (!allowed.includes(status)) {
+    throw new AppError(
+      StatusCodes.BAD_REQUEST,
+      `Cannot change status from ${rental.status} to ${status}`
+    );
+  }
+
+  return prisma.$transaction(async (tx) => {
+    const updatedRental = await tx.rentalOrder.update({
+      where: {
+        id: rentalId,
+      },
+      data: {
+        status,
+      },
+    });
+
+    if (
+      status === RentalStatus.CANCELLED ||
+      status === RentalStatus.RETURNED
+    ) {
+      const updatedGear = await tx.gearItem.update({
+        where: {
+          id: rental.gearItemId,
+        },
+        data: {
+          availableStock: {
+            increment: rental.quantity,
+          },
+        },
+      });
+
+      if (
+        updatedGear.availableStock > 0 &&
+        !updatedGear.isAvailable
+      ) {
+        await tx.gearItem.update({
+          where: {
+            id: rental.gearItemId,
+          },
+          data: {
+            isAvailable: true,
+          },
+        });
+      }
+    }
+
+    return updatedRental;
+  });
+};
+
 export const RentalService = {
   createRental,
+  getMyRentals,
+  getProviderOrders,
+  updateRentalStatus,
 };

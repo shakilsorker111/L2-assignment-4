@@ -21,6 +21,55 @@ const createRental = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const getMyRentals = catchAsync(async (req: Request, res: Response) => {
+  const result = await RentalService.getMyRentals(
+    req.user!.userId,
+    req.query
+  );
+
+  sendResponse(res, StatusCodes.OK, {
+    success: true,
+    message: "Rentals retrieved successfully",
+    meta: result.meta,
+    data: result.data,
+  });
+});
+
+const getProviderOrders = catchAsync(async (req: Request, res: Response) => {
+  const result = await RentalService.getProviderOrders(
+    req.user!.userId,
+    req.query
+  );
+
+  sendResponse(res, StatusCodes.OK, {
+    success: true,
+    message: "Orders retrieved successfully",
+    meta: result.meta,
+    data: result.data,
+  });
+});
+
+const updateRentalStatus = catchAsync(
+  async (req: Request, res: Response) => {
+    const result = await RentalService.updateRentalStatus(
+      req.params.id as string,
+      req.user!.userId,
+      req.body.status
+    );
+
+    sendResponse(res, StatusCodes.OK, {
+      success: true,
+      message: "Rental status updated successfully",
+      data: result,
+    });
+  }
+);
+
+
+
 export const RentalController = {
   createRental,
+   getMyRentals,
+  getProviderOrders,
+  updateRentalStatus,
 };
