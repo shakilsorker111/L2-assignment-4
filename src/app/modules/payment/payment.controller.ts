@@ -46,7 +46,71 @@ const webhook = async (req: Request, res: Response) => {
   });
 };
 
+const getMyPayments = catchAsync(
+  async (req: Request, res: Response) => {
+    const result = await PaymentService.getMyPayments(
+      req.user!.userId,
+      req.query
+    );
+
+    sendResponse(res, StatusCodes.OK, {
+      success: true,
+      message: "Payments retrieved successfully",
+      meta: result.meta,
+      data: result.data,
+    });
+  }
+);
+
+const getProviderPayments = catchAsync(
+  async (req: Request, res: Response) => {
+    const result = await PaymentService.getProviderPayments(
+      req.user!.userId,
+      req.query
+    );
+
+    sendResponse(res, StatusCodes.OK, {
+      success: true,
+      message: "Payments retrieved successfully",
+      meta: result.meta,
+      data: result.data,
+    });
+  }
+);
+
+const getAllPayments = catchAsync(
+  async (req: Request, res: Response) => {
+    const result = await PaymentService.getAllPayments(req.query);
+
+    sendResponse(res, StatusCodes.OK, {
+      success: true,
+      message: "Payments retrieved successfully",
+      meta: result.meta,
+      data: result.data,
+    });
+  }
+);
+
+const getPaymentById = catchAsync(
+  async (req: Request, res: Response) => {
+    const result = await PaymentService.getPaymentById(
+      req.params.id as string,
+      req.user!
+    );
+
+    sendResponse(res, StatusCodes.OK, {
+      success: true,
+      message: "Payment retrieved successfully",
+      data: result,
+    });
+  }
+);
+
 export const PaymentController = {
   createCheckoutSession,
   webhook,
+   getMyPayments,
+  getProviderPayments,
+  getAllPayments,
+  getPaymentById,
 };

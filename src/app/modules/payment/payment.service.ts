@@ -2,6 +2,7 @@ import {
   PaymentProvider,
   PaymentStatus,
   RentalStatus,
+  UserRole,
 } from "@prisma/client";
 import { StatusCodes } from "http-status-codes";
 
@@ -11,6 +12,8 @@ import config from "../../config";
 
 import AppError from "../../errors/AppError";
 import Stripe from "stripe";
+import { PaymentQuery } from "./payment.interface";
+import { JwtPayload } from "jsonwebtoken";
 
 const createCheckoutSession = async (
   rentalOrderId: string,
@@ -168,7 +171,206 @@ const handleWebhook = async (event: Stripe.Event) => {
   });
 };
 
+const getMyPayments = async (
+  customerId: string,
+  query: PaymentQuery
+) => {
+  const page = Number(query.page) || 1;
+  const limit = Number(query.limit) || 10;
+  const skip = (page - 1) * limit;
+
+  const where = {
+    rentalOrder: {
+      customerId,
+    },
+    ...(query.status && {
+      status: query.status as PaymentStatus,
+    }),
+  };
+
+  const payments = await prisma.payment.findMany({
+    where,
+    skip,
+    take: limit,
+    include: {
+      rentalOrder: {
+        include: {
+          gearItem: {
+            include: {
+              category: true,
+            },
+          },
+        },
+      },
+    },
+    orderBy: {
+      createdAt: query.sortOrder ?? "desc",
+    },
+  });
+
+  const total = await prisma.payment.count({ where });
+
+  return {
+    meta: {
+      page,
+      limit,
+      total,
+      totalPage: Math.ceil(total / limit),
+    },
+    data: payments,
+  };
+};
+
+const getProviderPayments = async (
+  providerId: string,
+  query: PaymentQuery
+) => {
+  const page = Number(query.page) || 1;
+  const limit = Number(query.limit) || 10;
+  const skip = (page - 1) * limit;
+
+  const where = {
+    rentalOrder: {
+      providerId,
+    },
+    ...(query.status && {
+      status: query.status as PaymentStatus,
+    }),
+  };
+
+  const payments = await prisma.payment.findMany({
+    where,
+    skip,
+    take: limit,
+    include: {
+      rentalOrder: {
+        include: {
+          customer: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+          gearItem: true,
+        },
+      },
+    },
+    orderBy: {
+      createdAt: query.sortOrder ?? "desc",
+    },
+  });
+
+  const total = await prisma.payment.count({ where });
+
+  return {
+    meta: {
+      page,
+      limit,
+      total,
+      totalPage: Math.ceil(total / limit),
+    },
+    data: payments,
+  };
+};
+
+const getAllPayments = async (
+  query: PaymentQuery
+) => {
+  const page = Number(query.page) || 1;
+  const limit = Number(query.limit) || 10;
+  const skip = (page - 1) * limit;
+
+  const where = {
+    ...(query.status && {
+      status: query.status as PaymentStatus,
+    }),
+  };
+
+  const payments = await prisma.payment.findMany({
+    where,
+    skip,
+    take: limit,
+    include: {
+      rentalOrder: {
+        include: {
+          customer: true,
+          provider: true,
+          gearItem: {
+            include: {
+              category: true,
+            },
+          },
+        },
+      },
+    },
+    orderBy: {
+      createdAt: query.sortOrder ?? "desc",
+    },
+  });
+
+  const total = await prisma.payment.count({ where });
+
+  return {
+    meta: {
+      page,
+      limit,
+      total,
+      totalPage: Math.ceil(total / limit),
+    },
+    data: payments,
+  };
+};
+
+const getPaymentById = async (
+  paymentId: string,
+  user: JwtPayload
+) => {
+  const payment = await prisma.payment.findUnique({
+    where: {
+      id: paymentId,
+    },
+    include: {
+      rentalOrder: {
+        include: {
+          customer: true,
+          provider: true,
+          gearItem: {
+            include: {
+              category: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (!payment) {
+    throw new AppError(
+      StatusCodes.NOT_FOUND,
+      "Payment not found"
+    );
+  }
+
+  if (
+    user.role !== UserRole.ADMIN &&
+    payment.rentalOrder.customerId !== user.userId &&
+    payment.rentalOrder.providerId !== user.userId
+  ) {
+    throw new AppError(
+      StatusCodes.FORBIDDEN,
+      "Unauthorized"
+    );
+  }
+
+  return payment;
+};
+
 export const PaymentService = {
   createCheckoutSession,
   handleWebhook,
+  getMyPayments,
+  getProviderPayments,
+  getAllPayments,
+  getPaymentById,
 };

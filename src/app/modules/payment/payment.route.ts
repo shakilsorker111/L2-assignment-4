@@ -22,4 +22,31 @@ router.post(
   PaymentController.webhook
 );
 
+router.get(
+  "/my-payments",
+  verifyToken,
+  authorize(UserRole.CUSTOMER),
+  PaymentController.getMyPayments
+);
+
+router.get(
+  "/provider-payments",
+  verifyToken,
+  authorize(UserRole.PROVIDER),
+  PaymentController.getProviderPayments
+);
+
+router.get(
+  "/",
+  verifyToken,
+  authorize(UserRole.ADMIN),
+  PaymentController.getAllPayments
+);
+
+router.get(
+  "/:id",
+  verifyToken,
+  PaymentController.getPaymentById
+);
+
 export default router;
