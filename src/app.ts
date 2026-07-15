@@ -8,6 +8,13 @@ import globalErrorHandler from "./app/middlewares/globalErrorHandler";
 const app = express();
 
 app.use(cors());
+
+app.use(
+  "/api/v1/payments/webhook",
+  express.raw({ type: "application/json" })
+);
+
+
 app.use(express.json());
 
 app.use("/api/v1", router);

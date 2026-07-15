@@ -11,4 +11,7 @@ export default {
   jwt_secret: process.env.JWT_SECRET as string,
   jwt_expires_in: process.env.JWT_EXPIRES_IN || "7d",
   bcrypt_salt_rounds: Number(process.env.BCRYPT_SALT_ROUNDS) || 10,
+  stripe_secret_key: process.env.STRIPE_SECRET_KEY,
+  client_url: process.env.CLIENT_URL,
+  stripe_webhook_secret: process.env.STRIPE_WEBHOOK_SECRET,
 }
