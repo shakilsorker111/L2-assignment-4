@@ -9,3 +9,9 @@ export interface UpdateReviewPayload {
   rating?: number;
   comment?: string;
 }
+
+export interface ReviewQuery {
+  page?: string;
+  limit?: string;
+  sortOrder?: "asc" | "desc";
+}
