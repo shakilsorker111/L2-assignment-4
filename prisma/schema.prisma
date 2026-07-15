@@ -146,6 +146,8 @@ model RentalOrder {
   gearItem GearItem @relation(fields: [gearItemId], references: [id])
 
   payment Payment?
+
+  review Review?
 }
 
 model Payment {
@@ -175,13 +177,19 @@ model Review {
 
   gearItemId String
 
+  rentalOrderId String @unique
+
   rating Int
 
   comment String
 
   createdAt DateTime @default(now())
 
+  updatedAt DateTime @updatedAt
+
   customer User @relation(fields: [customerId], references: [id])
 
   gearItem GearItem @relation(fields: [gearItemId], references: [id])
+
+  rentalOrder RentalOrder @relation(fields: [rentalOrderId], references: [id])
 }
