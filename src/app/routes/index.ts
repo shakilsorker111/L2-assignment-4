@@ -5,6 +5,7 @@ import gearRoutes from "../modules/gear";
 import rentalRoutes from "../modules/rental";
 import paymentRoutes from "../modules/payment";
 import reviewRoutes from "../modules/review";
+import dashboardRoutes from "../modules/dashboard";
 
 const router = Router();
 
@@ -15,6 +16,7 @@ router.use("/provider/gear", gearRoutes);
 router.use("/rentals", rentalRoutes);
 router.use("/payments", paymentRoutes);
 router.use("/reviews", reviewRoutes);
+router.use("/dashboard", dashboardRoutes);
 
 router.get("/", (_req, res) => {
   res.json({
