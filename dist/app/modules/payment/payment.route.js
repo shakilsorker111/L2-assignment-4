@@ -1,0 +1,20 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const verifyToken_1 = __importDefault(require("../../middlewares/verifyToken"));
+const authorize_1 = __importDefault(require("../../middlewares/authorize"));
+const client_1 = require("@prisma/client");
+const validateRequest_1 = __importDefault(require("../../middlewares/validateRequest"));
+const payment_validation_1 = require("./payment.validation");
+const payment_controller_1 = require("./payment.controller");
+const router = (0, express_1.Router)();
+router.post("/create-checkout-session", verifyToken_1.default, (0, authorize_1.default)(client_1.UserRole.CUSTOMER), (0, validateRequest_1.default)(payment_validation_1.createCheckoutSchema), payment_controller_1.PaymentController.createCheckoutSession);
+router.post("/webhook", payment_controller_1.PaymentController.webhook);
+router.get("/my-payments", verifyToken_1.default, (0, authorize_1.default)(client_1.UserRole.CUSTOMER), payment_controller_1.PaymentController.getMyPayments);
+router.get("/provider-payments", verifyToken_1.default, (0, authorize_1.default)(client_1.UserRole.PROVIDER), payment_controller_1.PaymentController.getProviderPayments);
+router.get("/", verifyToken_1.default, (0, authorize_1.default)(client_1.UserRole.ADMIN), payment_controller_1.PaymentController.getAllPayments);
+router.get("/:id", verifyToken_1.default, payment_controller_1.PaymentController.getPaymentById);
+exports.default = router;
